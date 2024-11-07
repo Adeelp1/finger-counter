@@ -1,36 +1,34 @@
 import cv2 as cv
-import mediapipe.python.solutions.hands as mpHands
-import mediapipe.python.solutions.drawing_utils as drawing
+import mediapipe as mp
 
-#Get Handlandmarks
-def getHandlandMarks(img,drw):
-    lmlist = []
+mpHands = mp.solutions.hands
+drawing = mp.solutions.drawing_utils
 
-    hands = mpHands.Hands(
+# Initialize Hands object
+hands = mpHands.Hands(
         static_image_mode= False,
         max_num_hands= 1,
         min_detection_confidence= 0.7
     )
 
+def getHandlandMarks(img, drw):
+    lmlist = []
     frameRgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-
     handsDetected = hands.process(frameRgb)
+
     if handsDetected.multi_hand_landmarks:
         for lanmarks in handsDetected.multi_hand_landmarks:
-            # print(lanmarks)
+            h, w, c = img.shape
             for id, lm in enumerate(lanmarks.landmark):
-                # print(id,lm)
-                h,w,c = img.shape
                 cx,cy = int(lm.x*w), int(lm.y*h)
                 lmlist.append((id, cx, cy))
-                # print(lmlist)
         if drw:
             drawing.draw_landmarks(
                 img,
                 lanmarks,
                 mpHands.HAND_CONNECTIONS
             )        
-    return(lmlist)
+    return lmlist
 
 # Finger Counting
 
@@ -62,18 +60,19 @@ while True:
     if not success:
         print("cam not detected...!")
         continue
+
     frame = cv.flip(frame, 1)
     lmlist = getHandlandMarks(img=frame,drw=False)
 
     if lmlist:
-        # print(lmlist)
         fc = fingerCounting(lmlist=lmlist)
-        # print(fc)
         cv.rectangle(frame, (400,10), (600,250), (0,0,0), -1)
         cv.putText(frame, str(fc), (400,250), cv.FONT_HERSHEY_PLAIN, 20, (0,255,255), 30)
 
     cv.imshow("AI finger counter", frame)
     if cv.waitKey(1) == ord('q'):
         break
+
+hands.close()
 cam.release()
 cv.destroyAllWindows()

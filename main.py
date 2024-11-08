@@ -1,5 +1,9 @@
 import cv2 as cv
 import mediapipe as mp
+import pygame
+
+# Initialize pygame mixer
+pygame.mixer.init()
 
 mpHands = mp.solutions.hands
 drawing = mp.solutions.drawing_utils
@@ -33,6 +37,9 @@ def getHandlandMarks(img, drw):
 # Finger Counting
 
 def fingerCounting(lmlist):
+    if len(lmlist) < 21: # Ensure all landmarks are detected
+        return None
+
     count = 0
     if lmlist[8][2] < lmlist[6][2]:
         count += 1
@@ -47,11 +54,28 @@ def fingerCounting(lmlist):
 
     return count
 
+# play sound
+def voice(num):
+    sound_files = {
+        0: 'sound/0.mp3',
+        1: 'sound/1.mp3',
+        2: 'sound/2.mp3',
+        3: 'sound/3.mp3',
+        4: 'sound/4.mp3',
+        5: 'sound/5.mp3'
+    }
 
+    file_path = sound_files.get(num)
+    if file_path:
+        try:
+            pygame.mixer.music.load(file_path)
+            pygame.mixer.music.play()
+        except pygame.error as e:
+            print(f"Error loading sound: {e}")
 
 #camera setup
-
 cam = cv.VideoCapture(0)
+last_count = -1 # Track the last count to avoid repeating sounds
 
 
 while True:
@@ -65,7 +89,14 @@ while True:
     lmlist = getHandlandMarks(img=frame,drw=False)
 
     if lmlist:
-        fc = fingerCounting(lmlist=lmlist)
+        fc = fingerCounting(lmlist)
+        # Play sound only if the count changes
+        if fc is not None:
+            if fc != last_count:
+                voice(fc)
+                last_count = fc # Update last count
+
+        # Display count on frame
         cv.rectangle(frame, (400,10), (600,250), (0,0,0), -1)
         cv.putText(frame, str(fc), (400,250), cv.FONT_HERSHEY_PLAIN, 20, (0,255,255), 30)
 
